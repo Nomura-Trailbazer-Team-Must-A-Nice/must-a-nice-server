@@ -32,6 +32,8 @@ def create_app(config_class=BaseConfig):
                 invocation_id = return_control['invocationId']
                 invocation_inputs = return_control['invocationInputs']
 
+                print(invocation_inputs)
+
                 for invocation_input in invocation_inputs:
                     function_invocation_input = invocation_input['functionInvocationInput']
                     action_group = function_invocation_input['actionGroup']
