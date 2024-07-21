@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, current_app
 import boto3
 import os
 from dotenv import load_dotenv
@@ -135,5 +135,3 @@ if __name__ == '__main__':
             'user': user.to_dict(),
             'token': token
         })
-    
-    return flask_app, db
