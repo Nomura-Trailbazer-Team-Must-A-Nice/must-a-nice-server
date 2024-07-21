@@ -9,3 +9,9 @@ agent-test.py
 bedrock-test.py
 
 .env
+venv/
+
+bin/
+*.cfg
+
+.history/

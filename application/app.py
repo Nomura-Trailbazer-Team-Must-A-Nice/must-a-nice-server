@@ -4,6 +4,10 @@ import os
 from dotenv import load_dotenv
 import random
 import string
+import logging
+from flask_jwt_extended import create_access_token, current_user
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 from config import BaseConfig
 from application.configure_extensions import configure_extensions
@@ -112,3 +116,24 @@ load_dotenv()
 if __name__ == '__main__':
     app, db = create_app()
     app.run(debug=True)
+
+    def get_or_create_user(idinfo):
+        if not (user := User.objects(email=idinfo.get('email')).first()):
+            user = User(email=idinfo.get('email'), first_name=idinfo.get('given_name'), last_name=idinfo.get('family_name'))
+            user.save()
+        return user
+    
+    @flask_app.route('/api/token_verification', methods=['POST'])
+    def token_verification():
+        token = request.get_json().get('token')
+        client_id = current_app.config["GOOGLE_WEBCLIENT_ID"]
+
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), client_id)
+        user = get_or_create_user(idinfo)
+        token = create_access_token(user)
+        return jsonify({
+            'user': user.to_dict(),
+            'token': token
+        })
+    
+    return flask_app, db

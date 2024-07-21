@@ -12,8 +12,8 @@ class BaseConfig:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'a4f170dfa18c005e4a5ab155b1a9ec83ae1d155d05d41067')
     FLASK_ADMIN_FLUID_LAYOUT = os.environ.get('FLASK_ADMIN_FLUID_LAYOUT', True)
 
-    # Auth0
-    AUTH0_TENANT = os.environ.get('AUTH0_TENANT', 'dev-unravel')
+    # GOOGLE
+    GOOGLE_WEBCLIENT_ID = os.environ.get('GOOGLE_WEBCLIENT_ID', None)
 
     # JWT
     JWT_SECRETS = os.environ.get('JWT_SECRETS', 'unravel_so_SECURE')
