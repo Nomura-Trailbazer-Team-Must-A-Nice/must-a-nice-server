@@ -32,14 +32,29 @@ def create_app(config_class=BaseConfig):
                 invocation_id = return_control['invocationId']
                 invocation_inputs = return_control['invocationInputs']
 
-                print(invocation_inputs)
+                print(f"\nInvocation Inputs: {invocation_inputs}")
 
                 for invocation_input in invocation_inputs:
                     function_invocation_input = invocation_input['functionInvocationInput']
                     action_group = function_invocation_input['actionGroup']
                     function = function_invocation_input['function']
                     parameters = function_invocation_input['parameters']
-                    if action_group == 'retrieve-customer-settings' and function == 'retrieve-customer-settings-from-crm':
+                    print(f"\nAction Group: {action_group}, Function: {function}")
+                    if action_group == 'core-crm-actions' and function == 'schedule_meeting':
+                        print("SCHEDULED MEETING CALLED")
+                        return_control_invocation_results.append( {
+                            'functionResult': {
+                                'actionGroup': action_group,
+                                'function': function,
+                                'responseBody': {
+                                    'TEXT': {
+                                        'body': '{ "customer id": 12345 }' # Simulated API
+                                    }
+                                }
+                            }}
+                        )
+                    if action_group == 'core-crm-actions' and function == 'summarized_email_thread':
+                        print("SUMMARIZED EMAIL CALLED")
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
