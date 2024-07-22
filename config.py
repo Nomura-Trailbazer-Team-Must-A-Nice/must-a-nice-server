@@ -21,9 +21,14 @@ class BaseConfig:
     JWT_EXPIRATION_DELTA = timedelta(hours=1)
     JWT_EXPIRATION = 3600 * 3  # 3 hours
     JWT_EXPIRATION_LONG = 86400 * 30  # 30 days
-    INVITATION_TOKEN_EXPIRE_DAYS = 7  # 7 days
+
     # Mongo engine
     MONGODB_HOST = os.environ.get('MONGODB_HOST', 'mongodb://localhost:27017/nomura?serverSelectionTimeoutMs=500')
+
+    # Flask Session
+    SESSION_TYPE = 'mongodb'
+    SESSION_MONGODB_DB = 'nomura_session'
+
 
     # CORS
     # CORS_ORIGINS = os.environ.get('CORS_ORIGINS', [r'.*localhost:3000$'])
