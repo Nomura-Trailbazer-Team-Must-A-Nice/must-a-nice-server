@@ -2,6 +2,12 @@ __pycache__/
 
 *.pyc
 
+.venv/
+
+agent-test.py
+
+bedrock-test.py
+
 venv/
 
 bin/
