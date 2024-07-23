@@ -48,7 +48,6 @@ def configure_extensions(app):
         # if the user has been deleted from the database).
         user_email = jwt_data['sub']
 
-        session_id = jwt_data.get('session_id', None)
         user = User.objects(email=user_email).first()
         if user is None:
             raise AuthenticationException("User id provided is not valid.")

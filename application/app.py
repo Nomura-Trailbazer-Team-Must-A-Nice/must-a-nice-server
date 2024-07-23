@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, current_app
 import boto3
 import os
-from dotenv import load_dotenv
 import random
 import string
 import logging
@@ -129,14 +128,6 @@ def create_app(config_class=BaseConfig):
 
         return jsonify({'message': 'Prompt processed successfully', 'session_id': session_id}), 200
 
-    return flask_app, db
-
-load_dotenv()
-
-if __name__ == '__main__':
-    app, db = create_app()
-    app.run(debug=True)
-
     def get_or_create_user(idinfo):
         if not (user := User.objects(email=idinfo.get('email')).first()):
             user = User(email=idinfo.get('email'), first_name=idinfo.get('given_name'), last_name=idinfo.get('family_name'))
@@ -217,3 +208,5 @@ if __name__ == '__main__':
             'user': current_user.to_dict(),
             'msg': session['google_token']
         })
+
+    return flask_app, db
