@@ -17,7 +17,7 @@ def create_app(config_class=BaseConfig):
     init_auth_views(auth_bp)
     flask_app.register_blueprint(auth_bp)
 
-    def process_response(response):
+    def process_response(response, bedrock_agent_runtime, session_id):
         print('\nprocess_response', response)
 
         completion = ''
@@ -94,7 +94,8 @@ def create_app(config_class=BaseConfig):
                     'returnControlInvocationResults': return_control_invocation_results
                 },
             )
-            process_response(new_response)
+            print("New Response ", new_response)
+            process_response(new_response, bedrock_agent_runtime, session_id)
     
     @flask_app.route('/api/handle_user_prompt', methods=['POST'])
     def handle_user_prompt():
@@ -105,7 +106,7 @@ def create_app(config_class=BaseConfig):
             return jsonify({'error': 'No prompt provided'}), 400
 
         bedrock_agent_runtime = boto3.client('bedrock-agent-runtime')
-        session_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        session_id = "NOMURAWIN8" # ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
         first_response = bedrock_agent_runtime.invoke_agent(
             enableTrace=True,
@@ -115,7 +116,7 @@ def create_app(config_class=BaseConfig):
             inputText=prompt,
         )
 
-        process_response(first_response)
+        process_response(first_response, bedrock_agent_runtime, session_id)
 
         return jsonify({'message': 'Prompt processed successfully', 'session_id': session_id}), 200
     
