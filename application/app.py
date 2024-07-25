@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from config import BaseConfig
 from application.configure_extensions import configure_extensions
 from application.auth.auth import auth_bp, init_auth_views
+from ikigai_tools import summarize_email_history, get_calendar_availability, get_current_time
 
 def create_app(config_class=BaseConfig):
     flask_app = Flask(__name__, static_url_path='/static')
@@ -39,28 +40,48 @@ def create_app(config_class=BaseConfig):
                     function = function_invocation_input['function']
                     parameters = function_invocation_input['parameters']
                     print(f"\nAction Group: {action_group}, Function: {function}")
-                    if action_group == 'core-crm-actions' and function == 'schedule_meeting':
-                        print("SCHEDULED MEETING CALLED")
+                    if action_group == 'core-crm-actions' and function == 'summarize_email_history':
+                        summarized_email_history = None
+                        email_id = None
+                        for param in parameters:
+                            if param['name'] == 'email_id':
+                                email_id = param['value']
+                        if email_id:
+                            summarized_email_history = summarize_email_history(email_id)
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
                                 'function': function,
                                 'responseBody': {
                                     'TEXT': {
-                                        'body': '{ "customer id": 12345 }' # Simulated API
+                                        'body': '{ "summarized email history" : ' + str(summarized_email_history) + ' }'
                                     }
                                 }
                             }}
                         )
-                    if action_group == 'core-crm-actions' and function == 'summarized_email_thread':
-                        print("SUMMARIZED EMAIL CALLED")
+                    if action_group == 'core-crm-actions' and function == 'get_calendar_availability':
+                        calendar_availability = get_calendar_availability()
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
                                 'function': function,
                                 'responseBody': {
                                     'TEXT': {
-                                        'body': '{ "customer id": 12345 }' # Simulated API
+                                        'body': '{ "calendar availability": ' + str(calendar_availability) + ' }'
+                                    }
+                                }
+                            }}
+                        )
+
+                    if action_group == 'core-crm-actions' and function == 'get_current_time':
+                        current_time = get_current_time()
+                        return_control_invocation_results.append( {
+                            'functionResult': {
+                                'actionGroup': action_group,
+                                'function': function,
+                                'responseBody': {
+                                    'TEXT': {
+                                        'body': '{ "current time": ' + str(current_time) + ' }'
                                     }
                                 }
                             }}
