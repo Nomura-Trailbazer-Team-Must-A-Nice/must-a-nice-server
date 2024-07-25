@@ -1,13 +1,16 @@
 import logging
+import json
 
 from flask import Blueprint, request, jsonify, current_app, session
 from flask_jwt_extended import create_refresh_token, create_access_token, jwt_required, get_jwt, get_jwt_identity, decode_token
-from google.oauth2 import id_token
-from google.auth.transport import requests
+from requests_oauthlib import OAuth2Session
+from oauthlib.oauth2 import TokenExpiredError
 
 from application.mongodb.user import User
 from application.mongodb.token_blocklist import TokenBlocklist
-from application.auth.utils import get_or_create_user
+from application.auth.utils import get_or_create_user, save_token
+from application.google.utils import get_google_client
+from application.common.utils import sync_google_with_s3
 
 auth_bp = Blueprint("auth_v1", __name__, url_prefix="/api/auth")
 
@@ -18,26 +21,36 @@ class AuthController:
     def __init__(self, bp):
         @bp.route('/login', methods=['POST'])
         def login():
-            google_token = request.get_json().get('token')
-            client_id = current_app.config["GOOGLE_WEBCLIENT_ID"]
+            # (Receive auth_code by HTTPS POST)
+            auth_code = request.get_json().get('serverAuthCode')
+            with open('./application/auth/client_secret_111215959056-ajrsif3algjo4o02qs77poqrh77lajgi.apps.googleusercontent.com.json') as f:
+                secrets = json.load(f)
+                f.close()
+            client_id = "111215959056-iv8f05tp31s8m86h9ifhhqnr45mfvd4k.apps.googleusercontent.com"
+            client_secret = "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"
+            scopes = ['openid', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/calendar', 'https://mail.google.com']
 
-            try:
-                idinfo = id_token.verify_oauth2_token(google_token, requests.Request(), client_id)
-            except ValueError as e:
-                logging.error(e)
-                return jsonify({
-                    'msg': "Invalid token"
-                }), 400
+            google = OAuth2Session(client_id=client_id, scope=scopes)
+            tokens = google.fetch_token(token_url='https://oauth2.googleapis.com/token', code=auth_code, client_secret=client_secret)
+            session['google_tokens'] = tokens
 
-            user = get_or_create_user(idinfo)
+            google_client = get_google_client()
+            user_info = google_client.get('https://www.googleapis.com/oauth2/v1/userinfo').json()
+
+            user = get_or_create_user(user_info)
             access_token = create_access_token(user)
             refresh_token = create_refresh_token(user)
-            session['google_token'] = google_token
+
+            sync_google_with_s3(google_client, user)
             return jsonify({
-                'user': user.to_dict(),
                 'access_token': access_token,
                 'refresh_token': refresh_token
             })
+        
+        @bp.route('/test_login', methods=['GET'])
+        def test_login():
+            session['test'] = "Fuck this shit"
+            return jsonify(True)
         
         @bp.route('/logout', methods=['DELETE'])
         @jwt_required()
@@ -67,7 +80,7 @@ class AuthController:
                     'msg': "Token is already revoked"
                 }), 400
 
-            session.pop('google_token', None)
+            session.pop('google_tokens', None)
 
             return jsonify({
                 'msg': "You have successfully logged out"
@@ -82,4 +95,28 @@ class AuthController:
             return jsonify({
                 'access_token': access_token
             })
-    
+        
+        @bp.route("/test_google", methods=["POST"])
+        @jwt_required()
+        def test_google():
+            with open('./application/auth/client_secret_111215959056-ajrsif3algjo4o02qs77poqrh77lajgi.apps.googleusercontent.com.json') as f:
+                secrets = json.load(f)
+                f.close()
+            client_id = secrets['web']['client_id']
+            token = session.get('google_tokens')
+            try:
+                google = OAuth2Session(client_id, token=token)
+                user_info = google.get('https://www.googleapis.com/oauth2/v1/userinfo').json()
+            except TokenExpiredError as e:
+                token = google.refresh_token('https://oauth2.googleapis.com/token')
+                save_token(token)
+            google = OAuth2Session(client_id, token=token)
+            user_info = google.get('https://www.googleapis.com/oauth2/v1/userinfo').json()
+            return jsonify(user_info)
+        
+        @bp.route("/test_session", methods=["POST"])
+        def test_session():
+            test = session['test']
+            return jsonify({
+                'test': test
+            })
