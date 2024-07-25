@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from config import BaseConfig
 from application.configure_extensions import configure_extensions
 from application.auth.auth import auth_bp, init_auth_views
+from application.ikigai_tools import summarize_email_history, get_calendar_availability, get_current_time
 
 def create_app(config_class=BaseConfig):
     flask_app = Flask(__name__, static_url_path='/static')
@@ -17,7 +18,7 @@ def create_app(config_class=BaseConfig):
     init_auth_views(auth_bp)
     flask_app.register_blueprint(auth_bp)
 
-    def process_response(response):
+    def process_response(response, bedrock_agent_runtime, session_id):
         print('\nprocess_response', response)
 
         completion = ''
@@ -39,28 +40,48 @@ def create_app(config_class=BaseConfig):
                     function = function_invocation_input['function']
                     parameters = function_invocation_input['parameters']
                     print(f"\nAction Group: {action_group}, Function: {function}")
-                    if action_group == 'core-crm-actions' and function == 'schedule_meeting':
-                        print("SCHEDULED MEETING CALLED")
+                    if action_group == 'core-crm-actions' and function == 'summarize_email_history':
+                        summarized_email_history = None
+                        email_id = None
+                        for param in parameters:
+                            if param['name'] == 'email_id':
+                                email_id = param['value']
+                        if email_id:
+                            summarized_email_history = summarize_email_history(email_id)
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
                                 'function': function,
                                 'responseBody': {
                                     'TEXT': {
-                                        'body': '{ "customer id": 12345 }' # Simulated API
+                                        'body': '{ "summarized email history" : ' + str(summarized_email_history) + ' }'
                                     }
                                 }
                             }}
                         )
-                    if action_group == 'core-crm-actions' and function == 'summarized_email_thread':
-                        print("SUMMARIZED EMAIL CALLED")
+                    if action_group == 'core-crm-actions' and function == 'get_calendar_availability':
+                        calendar_availability = get_calendar_availability()
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
                                 'function': function,
                                 'responseBody': {
                                     'TEXT': {
-                                        'body': '{ "customer id": 12345 }' # Simulated API
+                                        'body': '{ "calendar availability": ' + str(calendar_availability) + ' }'
+                                    }
+                                }
+                            }}
+                        )
+
+                    if action_group == 'core-crm-actions' and function == 'get_current_time':
+                        current_time = get_current_time()
+                        return_control_invocation_results.append( {
+                            'functionResult': {
+                                'actionGroup': action_group,
+                                'function': function,
+                                'responseBody': {
+                                    'TEXT': {
+                                        'body': '{ "current time": ' + str(current_time) + ' }'
                                     }
                                 }
                             }}
@@ -94,7 +115,8 @@ def create_app(config_class=BaseConfig):
                     'returnControlInvocationResults': return_control_invocation_results
                 },
             )
-            process_response(new_response)
+            print("New Response ", new_response)
+            process_response(new_response, bedrock_agent_runtime, session_id)
     
     @flask_app.route('/api/handle_user_prompt', methods=['POST'])
     def handle_user_prompt():
@@ -105,7 +127,7 @@ def create_app(config_class=BaseConfig):
             return jsonify({'error': 'No prompt provided'}), 400
 
         bedrock_agent_runtime = boto3.client('bedrock-agent-runtime')
-        session_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        session_id = "NOMURAWIN8" # ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
         first_response = bedrock_agent_runtime.invoke_agent(
             enableTrace=True,
@@ -115,7 +137,7 @@ def create_app(config_class=BaseConfig):
             inputText=prompt,
         )
 
-        process_response(first_response)
+        process_response(first_response, bedrock_agent_runtime, session_id)
 
         return jsonify({'message': 'Prompt processed successfully', 'session_id': session_id}), 200
     
