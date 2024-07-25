@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from config import BaseConfig
 from application.configure_extensions import configure_extensions
 from application.auth.auth import auth_bp, init_auth_views
-from ikigai_tools import summarize_email_history, get_calendar_availability, get_current_time
+from application.ikigai_tools import summarize_email_history, get_calendar_availability, get_current_time
 
 def create_app(config_class=BaseConfig):
     flask_app = Flask(__name__, static_url_path='/static')
