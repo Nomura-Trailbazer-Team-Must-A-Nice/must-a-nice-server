@@ -3,8 +3,10 @@ import boto3
 from base64 import urlsafe_b64decode 
 
 def sync_google_with_s3(client, user):
-    s3_resource = boto3.resource('s3')
-    bucket = s3_resource.Bucket(f'ikigai-emails-{user.id}')
+    s3_client = boto3.client('s3')
+    bucket = s3_client.create_bucket(Bucket=f'ikigai-emails-{user.id}')
+    s3_resoruce = boto3.resource('s3')
+    bucket = s3_resoruce.Bucket(f'ikigai-emails-{user.id}')
     bucket.objects.all().delete()
     threads = client.get('https://www.googleapis.com/gmail/v1/users/me/threads?q=after:2024/01/01 is:important OR is:starred').json()
     while 'threads' in threads:
@@ -50,6 +52,9 @@ def sync_google_with_s3(client, user):
                     out_str += f"Subject: {message['subject']}\n"
                     out_str += f"Body: {message.get('body')}\n\n"
 
-                s3_client = boto3.client('s3')
                 s3_client.put_object(Bucket=f'ikigai-emails-{user.id}', Key=f'{subject}-{date}.txt', Body=out_str)
+        if 'nextPageToken' not in threads:
+            break
+        threads = client.get(f'https://www.googleapis.com/gmail/v1/users/me/threads?q=after:2024/01/01 is:important OR is:starred&pageToken={threads["nextPageToken"]}').json()
+    return
                         
