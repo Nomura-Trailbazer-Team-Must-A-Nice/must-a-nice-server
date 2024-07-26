@@ -1,7 +1,5 @@
 import boto3
 import os
-import random
-import string
 
 from flask import Flask, request, jsonify
 from flask_jwt_extended import jwt_required, current_user
@@ -10,7 +8,7 @@ from flask_session import Session
 from config import BaseConfig
 from application.configure_extensions import configure_extensions
 from application.auth.auth import auth_bp, init_auth_views
-from application.ikigai_tools import summarize_email_history, get_calendar_availability, get_current_time
+from application.ikigai_tools import summarize_email_history, schedule_customer_meeting, get_current_time, generate_meeting_brief
 
 def create_app(config_class=BaseConfig):
     flask_app = Flask(__name__, static_url_path='/static')
@@ -44,13 +42,7 @@ def create_app(config_class=BaseConfig):
                     parameters = function_invocation_input['parameters']
                     print(f"\nAction Group: {action_group}, Function: {function}")
                     if action_group == 'core-crm-actions' and function == 'summarize_email_history':
-                        summarized_email_history = None
-                        email_id = None
-                        for param in parameters:
-                            if param['name'] == 'email_id':
-                                email_id = param['value']
-                        if email_id:
-                            summarized_email_history = summarize_email_history(email_id)
+                        summarized_email_history = summarize_email_history()
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
@@ -62,21 +54,35 @@ def create_app(config_class=BaseConfig):
                                 }
                             }}
                         )
-                    if action_group == 'core-crm-actions' and function == 'get_calendar_availability':
-                        calendar_availability = get_calendar_availability()
+                    if action_group == 'core-crm-actions' and function == 'schedule_customer_meeting':
+                        customer_meeting = schedule_customer_meeting()
                         return_control_invocation_results.append( {
                             'functionResult': {
                                 'actionGroup': action_group,
                                 'function': function,
                                 'responseBody': {
                                     'TEXT': {
-                                        'body': '{ "calendar availability": ' + str(calendar_availability) + ' }'
+                                        'body': '{ "updates on meeting with customer": ' + str(customer_meeting) + ' }'
                                     }
                                 }
                             }}
                         )
 
-                    if action_group == 'core-crm-actions' and function == 'get_current_time':
+                    if action_group == 'core-crm-actions' and function == 'generate_meeting_brief':
+                        meeting_brief_response = generate_meeting_brief()
+                        return_control_invocation_results.append( {
+                            'functionResult': {
+                                'actionGroup': action_group,
+                                'function': function,
+                                'responseBody': {
+                                    'TEXT': {
+                                        'body': '{ "meeting brief": ' + str(meeting_brief_response) + ' }'
+                                    }
+                                }
+                            }}
+                        )
+
+                    if action_group == 'get-additional-info' and function == 'get_current_time':
                         current_time = get_current_time()
                         return_control_invocation_results.append( {
                             'functionResult': {
