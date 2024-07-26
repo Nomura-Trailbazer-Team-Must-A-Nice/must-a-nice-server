@@ -9,7 +9,7 @@ from oauthlib.oauth2 import TokenExpiredError
 from application.mongodb.user import User
 from application.mongodb.token_blocklist import TokenBlocklist
 from application.auth.utils import get_or_create_user, save_token
-from application.google.utils import get_google_client
+from application.google.utils import get_google_client, create_google_event, get_google_calendar_availability
 from application.common.utils import sync_google_with_s3
 
 auth_bp = Blueprint("auth_v1", __name__, url_prefix="/api/auth")
@@ -36,6 +36,11 @@ class AuthController:
 
             google_client = get_google_client()
             user_info = google_client.get('https://www.googleapis.com/oauth2/v1/userinfo').json()
+
+            calendar_availability = get_google_calendar_availability()
+            print(calendar_availability)
+
+            free_time = create_google_event("Test", "Test")
 
             user = get_or_create_user(user_info)
             access_token = create_access_token(user)
