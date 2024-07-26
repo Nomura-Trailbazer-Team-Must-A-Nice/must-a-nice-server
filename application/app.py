@@ -9,6 +9,7 @@ from config import BaseConfig
 from application.configure_extensions import configure_extensions
 from application.auth.auth import auth_bp, init_auth_views
 from application.ikigai_tools import summarize_email_history, schedule_customer_meeting, get_current_time, generate_meeting_brief
+from application.mongodb.message import Message
 
 def create_app(config_class=BaseConfig):
     flask_app = Flask(__name__, static_url_path='/static')
@@ -18,6 +19,8 @@ def create_app(config_class=BaseConfig):
 
     init_auth_views(auth_bp)
     flask_app.register_blueprint(auth_bp)
+
+    bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name="us-east-1")
 
     def process_response(response, bedrock_agent_runtime, session_id):
         print('\nprocess_response', response)
@@ -126,7 +129,7 @@ def create_app(config_class=BaseConfig):
                 },
             )
             print("New Response ", new_response)
-            process_response(new_response, bedrock_agent_runtime, session_id)
+            return process_response(new_response, bedrock_agent_runtime, session_id)
     
     @flask_app.route('/api/handle_user_prompt', methods=['POST'])
     @jwt_required()
@@ -134,10 +137,11 @@ def create_app(config_class=BaseConfig):
         data = request.json
         prompt = data.get('prompt')
 
+        Message(user=current_user, content=prompt).save()
+
         if not prompt:
             return jsonify({'error': 'No prompt provided'}), 400
 
-        bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name="us-east-1")
         session_id = "NOMURAWIN8" # ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
         first_response = bedrock_agent_runtime.invoke_agent(
@@ -150,6 +154,21 @@ def create_app(config_class=BaseConfig):
 
         response = process_response(first_response, bedrock_agent_runtime, session_id)
 
+        Message(user=current_user, content=response, is_response=True).save()
+
         return jsonify({'message': response, 'session_id': session_id}), 200
+    
+    @flask_app.route('/api/message', methods=['GET'])
+    @jwt_required()
+    def get_messages():
+        messages = Message.objects(user=current_user)
+        return jsonify([message.to_dict() for message in messages]), 200
+    
+    @flask_app.route('/api/resetmessage', methods=['DELETE'])
+    @jwt_required()
+    def reset_messages():
+        Message.objects(user=current_user).delete()
+        bedrock_agent_runtime.delete_agent_memory(agentAliasId=os.environ['IKIGAI_AGENT_ALIAS_ID'], agentId=os.environ['IKIGAI_AGENT_ID'])
+        return jsonify({'message': 'Messages reset'}), 200
     
     return flask_app, db

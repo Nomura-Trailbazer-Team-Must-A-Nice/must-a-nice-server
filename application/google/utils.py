@@ -18,8 +18,6 @@ def get_google_client():
     with open('./application/auth/client_secret_111215959056-ajrsif3algjo4o02qs77poqrh77lajgi.apps.googleusercontent.com.json') as f:
         secrets = json.load(f)
         f.close()
-        secrets = json.load(f)
-        f.close()
     tokens = session.get('google_tokens')
     client_id = secrets['web']['client_id']
     refresh_url = secrets['web']['token_uri']
@@ -95,7 +93,7 @@ def authenticate():
     return creds
 
 def create_and_update_document(document_template_id, summary, recommendation, workdone):
-    creds = authenticate()
+    creds = get_google_client()
     try:
         docs_service = build("docs", "v1", credentials=creds)
         drive_service = build("drive", "v3", credentials=creds)
@@ -152,7 +150,7 @@ def create_and_update_document(document_template_id, summary, recommendation, wo
         return None
 
 def create_and_update_presentation(presentation_template_id, summary, recommendation, workdone):
-    creds = authenticate()
+    creds = get_google_client()
     try:
         slides_service = build("slides", "v1", credentials=creds)
         drive_service = build("drive", "v3", credentials=creds)
