@@ -6,6 +6,7 @@ from application.common.utils import find_free_time
 from requests_oauthlib import OAuth2Session
 from flask import session
 
+from application.common.utils import find_free_time
 import os.path
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -32,6 +33,43 @@ def get_google_client():
     
     return oauth
 
+def get_google_calendar_availability():
+    client = get_google_client()
+    current_time = datetime.now(timezone.utc).isoformat()
+    url = f'https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true'
+    calendar = client.get(url).json()
+    user_timezone = calendar['timeZone']
+    events = []
+    while 'items' in calendar:
+        for event in calendar['items']:
+            events.append({
+                'start': datetime.fromisoformat(event['start']['dateTime']),
+                'end': datetime.fromisoformat(event['end']['dateTime'])
+            })
+        if 'nextPageToken' not in calendar:
+            break
+        calendar = client.get(f'https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&pageToken={calendar["nextPageToken"]}').json()
+    return events, user_timezone
+
+def create_google_event(title, description, client_availability=[]):
+    client = get_google_client()
+    my_availability, user_timezone = get_google_calendar_availability()
+    meeting_time = find_free_time(my_availability, client_availability)
+    event = {
+        'summary': title,
+        'description': description,
+        'start': {
+            'dateTime': meeting_time['start'].isoformat(),
+            'timeZone': user_timezone
+        },
+        'end': {
+            'dateTime': meeting_time['end'].isoformat(),
+            'timeZone': user_timezone
+        }
+    }
+    client.post('https://www.googleapis.com/calendar/v3/calendars/primary/events', json=event)
+    return event
+
 SCOPES = [
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive",
@@ -55,7 +93,7 @@ def authenticate():
     return creds
 
 def create_and_update_document(document_template_id, summary, recommendation, workdone):
-    creds = authenticate()
+    creds = get_google_client()
     try:
         docs_service = build("docs", "v1", credentials=creds)
         drive_service = build("drive", "v3", credentials=creds)
@@ -112,7 +150,7 @@ def create_and_update_document(document_template_id, summary, recommendation, wo
         return None
 
 def create_and_update_presentation(presentation_template_id, summary, recommendation, workdone):
-    creds = authenticate()
+    creds = get_google_client()
     try:
         slides_service = build("slides", "v1", credentials=creds)
         drive_service = build("drive", "v3", credentials=creds)

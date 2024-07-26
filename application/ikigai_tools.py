@@ -195,17 +195,15 @@ def generate_meeting_brief():
     }
     messages_work = [message_1_work]
 
-    document_template_id = "16apEd2r6HGvgcBTJIRfXWz_wtbRlVGeAyaZpa1GHozM"
-    presentation_template_id = "1_pbE-1CLeEzwS-6E2mO_zAH2L83rmtngWXLGwWrvqGA"
+    # document_template_id = "16apEd2r6HGvgcBTJIRfXWz_wtbRlVGeAyaZpa1GHozM"
+    # presentation_template_id = "1_pbE-1CLeEzwS-6E2mO_zAH2L83rmtngWXLGwWrvqGA"
     summary = summarize_email_history()
     recommendation = generate_conversation(model_id, system_prompts_recommendation, messages_recommendation)
     workdone = generate_conversation(model_id, system_prompts_work, messages_work)
-    """
-    doc_link = create_and_update_document(document_template_id, summary, recommendation, workdone)
-    pres_link = create_and_update_presentation(presentation_template_id, summary, recommendation, workdone)
-    response = f"The meeting brief has been generated. You can view the document [here]({doc_link}) and the presentation [here]({pres_link})."
-    return response
-    """
+    # doc_link = create_and_update_document(document_template_id, summary, recommendation, workdone)
+    # pres_link = create_and_update_presentation(presentation_template_id, summary, recommendation, workdone)
+    # response = f"The meeting brief has been generated. You can view the document [here]({doc_link}) and the presentation [here]({pres_link})."
+    # return response
     meeting_brief = f"""Meeting Brief:
     Summary: {summary}
     Recommendation: {recommendation}
