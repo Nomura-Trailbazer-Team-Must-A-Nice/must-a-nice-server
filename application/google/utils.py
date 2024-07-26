@@ -32,7 +32,6 @@ def get_google_client():
     
     return oauth
 
-<<<<<<< HEAD
 def get_google_calendar_availability():
     client = get_google_client()
     current_time = datetime.now(timezone.utc).isoformat()
