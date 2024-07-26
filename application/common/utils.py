@@ -1,5 +1,7 @@
 import boto3
 
+from datetime import timedelta
+
 from base64 import urlsafe_b64decode 
 
 def sync_google_with_s3(client, user):
@@ -57,4 +59,21 @@ def sync_google_with_s3(client, user):
             break
         threads = client.get(f'https://www.googleapis.com/gmail/v1/users/me/threads?q=after:2024/01/01 is:important OR is:starred&pageToken={threads["nextPageToken"]}').json()
     return
-                        
+
+def find_free_time(events1, events2):              
+    events = events1 + events2
+    events.sort(key=lambda x: x['start'])
+    free_times = []
+    last_end = events[0]['end']
+    for event in events[1:]:
+        if event['start'] > last_end:
+            free_times.append({
+                'start': last_end,
+                'end': event['start']
+            })
+        if event['end'] > last_end:
+            last_end = event['end']
+    for free_time in free_times:
+        if free_time['end'] - free_time['start'] >= timedelta(hours=1.5):
+            return {'start': free_time['start'] + timedelta(minutes=15), 'end': free_time['start'] + timedelta(minutes=75)}
+    return None
