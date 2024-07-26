@@ -1,5 +1,8 @@
 import json
 
+from datetime import datetime, timezone
+from application.common.utils import find_free_time
+
 from requests_oauthlib import OAuth2Session
 from flask import session
 
@@ -12,8 +15,8 @@ from googleapiclient.errors import HttpError
 
 def get_google_client():
     with open('./application/auth/client_secret_111215959056-ajrsif3algjo4o02qs77poqrh77lajgi.apps.googleusercontent.com.json') as f:
-            secrets = json.load(f)
-            f.close()
+        secrets = json.load(f)
+        f.close()
     tokens = session.get('google_tokens')
     client_id = secrets['web']['client_id']
     refresh_url = secrets['web']['token_uri']
@@ -166,3 +169,40 @@ def create_and_update_presentation(presentation_template_id, summary, recommenda
     except HttpError as err:
         print(err)
         return None
+
+def get_google_calendar_availability():
+    client = get_google_client()
+    current_time = datetime.now(timezone.utc).isoformat()
+    url = f'https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true'
+    calendar = client.get(url).json()
+    user_timezone = calendar['timeZone']
+    events = []
+    while 'items' in calendar:
+        for event in calendar['items']:
+            events.append({
+                'start': datetime.fromisoformat(event['start']['dateTime']),
+                'end': datetime.fromisoformat(event['end']['dateTime'])
+            })
+        if 'nextPageToken' not in calendar:
+            break
+        calendar = client.get(f'https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&pageToken={calendar["nextPageToken"]}').json()
+    return events, user_timezone
+
+def create_google_event(title, description, client_availability=[]):
+    client = get_google_client()
+    my_availability, user_timezone = get_google_calendar_availability()
+    meeting_time = find_free_time(my_availability, client_availability)
+    event = {
+        'summary': title,
+        'description': description,
+        'start': {
+            'dateTime': meeting_time['start'].isoformat(),
+            'timeZone': user_timezone
+        },
+        'end': {
+            'dateTime': meeting_time['end'].isoformat(),
+            'timeZone': user_timezone
+        }
+    }
+    client.post('https://www.googleapis.com/calendar/v3/calendars/primary/events', json=event)
+    return event
