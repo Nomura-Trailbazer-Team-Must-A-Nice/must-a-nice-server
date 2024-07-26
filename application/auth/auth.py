@@ -37,8 +37,6 @@ class AuthController:
             google_client = get_google_client()
             user_info = google_client.get('https://www.googleapis.com/oauth2/v1/userinfo').json()
 
-            free_time = create_google_event("Test", "Test")
-
             user = get_or_create_user(user_info)
             access_token = create_access_token(user)
             refresh_token = create_refresh_token(user)

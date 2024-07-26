@@ -4,6 +4,7 @@ import random
 import string
 
 from flask import Flask, request, jsonify
+from flask_jwt_extended import jwt_required, current_user
 from flask_session import Session
 
 from config import BaseConfig
@@ -104,6 +105,7 @@ def create_app(config_class=BaseConfig):
         if len(completion) > 0:
             print('\ncompletion\n')
             print(completion)
+            return completion
 
         if len(return_control_invocation_results) > 0:
             print('\n- returnControlInvocationResults', return_control_invocation_results)
@@ -121,6 +123,7 @@ def create_app(config_class=BaseConfig):
             process_response(new_response, bedrock_agent_runtime, session_id)
     
     @flask_app.route('/api/handle_user_prompt', methods=['POST'])
+    @jwt_required()
     def handle_user_prompt():
         data = request.json
         prompt = data.get('prompt')
@@ -128,7 +131,7 @@ def create_app(config_class=BaseConfig):
         if not prompt:
             return jsonify({'error': 'No prompt provided'}), 400
 
-        bedrock_agent_runtime = boto3.client('bedrock-agent-runtime')
+        bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name="us-east-1")
         session_id = "NOMURAWIN8" # ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
         first_response = bedrock_agent_runtime.invoke_agent(
@@ -139,8 +142,8 @@ def create_app(config_class=BaseConfig):
             inputText=prompt,
         )
 
-        process_response(first_response, bedrock_agent_runtime, session_id)
+        response = process_response(first_response, bedrock_agent_runtime, session_id)
 
-        return jsonify({'message': 'Prompt processed successfully', 'session_id': session_id}), 200
+        return jsonify({'message': response, 'session_id': session_id}), 200
     
     return flask_app, db
