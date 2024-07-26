@@ -16,3 +16,6 @@ class User(BaseDocument):
         except EmailNotValidError as exc:
             raise ValidationError(f"Invalid email address '{input_email}'") from exc
         return super().validate(clean)
+    
+    def get_email(self):
+        return self.email
