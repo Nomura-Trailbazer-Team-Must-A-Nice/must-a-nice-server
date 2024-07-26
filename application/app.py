@@ -4,6 +4,7 @@ import random
 import string
 
 from flask import Flask, request, jsonify
+from flask_session import Session
 
 from config import BaseConfig
 from application.configure_extensions import configure_extensions
@@ -14,6 +15,7 @@ def create_app(config_class=BaseConfig):
     flask_app = Flask(__name__, static_url_path='/static')
     flask_app.config.from_object(config_class)
     db = configure_extensions(flask_app)
+    Session(flask_app)
 
     init_auth_views(auth_bp)
     flask_app.register_blueprint(auth_bp)
